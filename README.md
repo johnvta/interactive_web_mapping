@@ -1,1 +1,1 @@
-# choroplethmap
+# choropleth_web_map
