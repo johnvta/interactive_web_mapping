@@ -1,1 +1,1 @@
-# choropleth_web_map
+# interactive_web_mapping
