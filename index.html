@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Interactive Web Mapping</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+    <style>
+      h2, h3 {
+          margin: 10px;
+          font-size: 18px;
+      }
+
+      h3 {
+          font-size: 16px;
+      }
+
+      p {
+          margin: 10px;
+      }
+
+      #map {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          width: 100%;
+      }
+
+      .map-overlay {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          background: rgba(255, 255, 255, 0.8);
+          border-style: solid;
+          border-width: 1px;
+          border-color: rgba(0, 0, 0, 0.2);
+          margin-left: 20px;
+          font-family: Arial, sans-serif;
+          overflow: auto;
+          border-radius: 3px;
+      }
+
+      #features {
+          top: 0;
+          height: 160px;
+          margin-top: 20px;
+          width: 250px;
+      }
+
+      #legend {
+          padding: 10px;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+          line-height: 18px;
+          height: 210px;
+          margin-bottom: 40px;
+          width: 150px;
+      }
+
+      .legend-key {
+          display: inline-block;
+          border-radius: 20%;
+          width: 10px;
+          height: 10px;
+          margin-right: 5px;
+      }
+
+      .mapboxgl-canvas-container.mapboxgl-interactive,
+      .mapboxgl-ctrl-group button.mapboxgl-ctrl-compass {
+          cursor: unset;
+      }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class='map-overlay' id='features'>
+        <h2>Washington State Cumulative COVID-19 Death Rate</h2>
+        <div id='text-description'>
+            <p>Hover over a county!</p>
+        </div>
+    </div>
+    <div class='map-overlay' id='legend'></div>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
+
+        const map = new mapboxgl.Map({
+            container: 'map', // container ID
+            style: 'mapbox://styles/mapbox/light-v10', // style URL
+            zoom: 5.5, // starting zoom
+            center: [-120.7401, 47.7511] // starting center
+        });
+
+        async function geojsonFetch() {
+            let response = await fetch('assets/wa-covid-data-102521.geojson');
+            let wacovid = await response.json();
+
+            map.on('load', function loadingData() {
+                map.addSource('wacovid', {
+                    type: 'geojson',
+                    data: wacovid
+                });
+
+                map.addLayer({
+                    'id': 'wacovid-layer',
+                    'type': 'fill',
+                    'source': 'wacovid',
+                    'paint': {
+                      'fill-color': [
+                        'step',      // use step expression to provide fill color based on values
+                        
+                        ['get', 'deathPer10k'],  // get the density attribute from the data
+                        
+                        '#dfe2f9',
+                        1,
+                        
+                        '#bfc5f3',
+                        2,
+                        
+                        '#9ea8ec',
+                        5,
+                        
+                        '#7683d8',
+                        10,
+                        
+                        '#6f7bca',
+                        15,
+                        
+                        '#5f6aad',
+                        20,
+                        
+                        '#505990',
+                        25,
+                        
+                        '#404873'
+                
+                        ],
+                          'fill-outline-color': '#BBBBBB',
+                          'fill-opacity': 0.9,
+                    }
+                });
+
+                const layers = [
+                    '0-1',
+                    '1-2',
+                    '2-5',
+                    '5-10',
+                    '10-15',
+                    '15-20',
+                    '20-25',
+                    '25 and more'
+                ];
+                const colors = [
+                    '#DFE2F970',
+                    '#BFC5F370',
+                    '#9EA8EC70',
+                    '#7683D860',
+                    '#6F7BCA70',
+                    '#5F6AAD70',
+                    '#50599070',
+                    '#40487370'
+                ];
+
+                const legend = document.getElementById('legend');
+                legend.innerHTML = "<b>COVID-19 Death Rate (per 10k)<br><br>";
+
+                layers.forEach((layer, i) => {
+                    const color = colors[i];
+                    const item = document.createElement('div');
+                    const key = document.createElement('span');
+                    key.className = 'legend-key';
+                    key.style.backgroundColor = color;
+
+                    const value = document.createElement('span');
+                    value.innerHTML = `${layer}`;
+                    item.appendChild(key);
+                    item.appendChild(value);
+                    legend.appendChild(item);
+                });
+            });
+        }
+
+        map.on('mousemove', ({point}) => {
+          const county = map.queryRenderedFeatures(point, {
+              layers: ['wacovid-layer']
+          });
+          document.getElementById('text-description').innerHTML = county.length ?
+              `<h3>${county[0].properties.name}</h3><p><strong><em>${county[0].properties.deathPer10k}</strong> deaths per 10k people within the county</em></p>` :
+              `<p>Hover over a county!</p>`;
+      });
+
+        geojsonFetch();
+    </script>
+</body>
+</html>
